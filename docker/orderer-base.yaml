@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  orderer-base:
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - ORDERER_GENERAL_LOGLEVEL=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=PensionBoardMSP
+    volumes:
+      - ../config:/var/hyperledger/orderer
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer

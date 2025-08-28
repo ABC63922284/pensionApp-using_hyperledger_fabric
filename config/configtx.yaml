@@ -1,0 +1,62 @@
+---
+Organizations:
+
+    - &PensionBoard
+        Name: PensionBoardMSP
+        ID: PensionBoardMSP
+        MSPDir: crypto-config/pensionboard/msp
+        AnchorPeers:
+            - Host: peer0.pensionboard
+              Port: 7051
+
+    - &MoF
+        Name: MoFMSP
+        ID: MoFMSP
+        MSPDir: crypto-config/mof/msp
+        AnchorPeers:
+            - Host: peer0.mof
+              Port: 8051
+
+    - &BangladeshBank
+        Name: BangladeshBankMSP
+        ID: BangladeshBankMSP
+        MSPDir: crypto-config/bangladeshbank/msp
+        AnchorPeers:
+            - Host: peer0.bangladeshbank
+              Port: 9051
+
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - orderer0.example.com:7050
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 10
+        AbsoluteMaxBytes: 99 MB
+        PreferredMaxBytes: 512 KB
+    EtcdRaft:
+        Consenters:
+            - Host: orderer0.example.com
+              Port: 7050
+              ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer0.example.com/tls/server.crt
+              ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer0.example.com/tls/server.crt
+    Organizations:
+
+Profiles:
+
+    PensionGenesis:
+        <<: *OrdererDefaults
+        Consortiums:
+            PensionConsortium:
+                Organizations:
+                    - *PensionBoard
+                    - *MoF
+                    - *BangladeshBank
+
+    PensionChannel:
+        Consortium: PensionConsortium
+        Application:
+            Organizations:
+                - *PensionBoard
+                - *MoF
+                - *BangladeshBank

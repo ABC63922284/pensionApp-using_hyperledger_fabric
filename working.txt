@@ -1,0 +1,112 @@
+cd ~/Desktop/pension-fabric/fabric-samples/test-network
+./network.sh down
+docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
+# তালিকায় orderer.example.com / peer0.org1 / peer0.org2 না থাকলে ঠিক আছে
+
+
+export PATH=$PATH:$HOME/Desktop/pension-fabric/fabric-samples/bin
+peer version   # দেখবে v2.5.x
+
+
+cd ~/Desktop/pension-fabric
+
+# পুরনো কিছু থাকলে নামাও (warning ignore করা যাবে)
+docker compose -f docker/docker-compose.yaml down -v || true
+docker compose -f ca/docker-compose.ca.yaml down -v || true
+rm -rf crypto-config config/*.block config/*.tx
+
+# CA services উঠাও
+docker compose -f ca/docker-compose.ca.yaml up -d
+
+# চেক
+docker ps --format "table {{.Names}}\t{{.Status}}"
+# এখানে অন্তত এই নামগুলো দেখা উচিত: ca.pensionboard.gov.bd, ca.mof.gov.bd, ca.bangladeshbank.gov.bd
+
+
+mkdir -p ca/orgs/pensionboard ca/orgs/mof ca/orgs/bangladeshbank
+bash -c '
+for C in pensionboard mof bangladeshbank; do
+  NAME="ca.$C.gov.bd"
+  SRC=""
+  for p in /etc/hyperledger/fabric-ca-server/ca-cert.pem \
+           /etc/hyperledger/fabric-ca-server/tls-cert.pem \
+           /etc/hyperledger/fabric-ca-server/msp/cacerts/*.pem; do
+    docker exec "$NAME" sh -lc "[ -f $p ] || ls $p >/dev/null 2>&1" && SRC="$p" && break
+  done
+  if [ -z "$SRC" ]; then echo ">> $NAME: CA cert not found"; exit 1; fi
+  # যদি wildcard হয়, প্রথম ফাইলটা নাও
+  if echo "$SRC" | grep -q '\*'; then SRC=$(docker exec "$NAME" sh -lc "ls $SRC | head -n1"); srcIn="$SRC"; SRC="/tmp/_cacert.pem"; docker cp "$NAME:$srcIn" "$SRC"; docker cp "$SRC" "./ca/orgs/$C/ca-cert.pem"; rm -f "$SRC"; else docker cp "$NAME:$SRC" "./ca/orgs/$C/ca-cert.pem"; fi
+  echo ">> Copied $NAME cert to ./ca/orgs/$C/ca-cert.pem"
+done'
+ls -l ca/orgs/*/ca-cert.pem
+
+
+
+# PensionBoard
+fabric-ca-client enroll -u https://admin:adminpw@localhost:7054 \
+  --caname ca-pensionboard \
+  --tls.certfiles ${PWD}/ca/orgs/pensionboard/ca-cert.pem \
+  -M ${PWD}/crypto-config/pensionboard/msp
+
+# MoF
+fabric-ca-client enroll -u https://admin:adminpw@localhost:8054 \
+  --caname ca-mof \
+  --tls.certfiles ${PWD}/ca/orgs/mof/ca-cert.pem \
+  -M ${PWD}/crypto-config/mof/msp
+
+# Bangladesh Bank
+fabric-ca-client enroll -u https://admin:adminpw@localhost:9054 \
+  --caname ca-bangladeshbank \
+  --tls.certfiles ${PWD}/ca/orgs/bangladeshbank/ca-cert.pem \
+  -M ${PWD}/crypto-config/bangladeshbank/msp
+
+
+
+fabric-ca-client enroll -u https://admin:adminpw@localhost:9054 \
+  --caname ca-bangladeshbank \
+  --tls.certfiles ${PWD}/ca/orgs/bangladeshbank/ca-cert.pem \
+  -M ${PWD}/crypto-config/bangladeshbank/msp
+
+2025/08/27 17:31:40 [INFO] TLS Enabled
+2025/08/27 17:31:40 [INFO] generating key: &{A:ecdsa S:256}
+2025/08/27 17:31:40 [INFO] encoded CSR
+Error: POST failure of request: POST https://localhost:7054/enroll
+{"hosts":["kali"],"certificate_request":"-----BEGIN CERTIFICATE REQUEST-----\nMIIBOTCB4QIBADBdMQswCQYDVQQGEwJVUzEXMBUGA1UECBMOTm9ydGggQ2Fyb2xp\nbmExFDASBgNVBAoTC0h5cGVybGVkZ2VyMQ8wDQYDVQQLEwZGYWJyaWMxDjAMBgNV\nBAMTBWFkbWluMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgqiuGfbwUEh135MQ\nvUzrcnj7fAnfXudIwfakTm8kAwNs5BQeV8LHWpUOhQ+q9a2DWeuroQIz7huQu785\neTSeRaAiMCAGCSqGSIb3DQEJDjETMBEwDwYDVR0RBAgwBoIEa2FsaTAKBggqhkjO\nPQQDAgNHADBEAiA0i4747KpqZZ4dsnjw2hgLa6Phqq0kJtnxmtITOyedbwIgR/Y2\n+65ufA/UeyN+Ozw+5fcBjs+kY8mD8XeeXz4BeSA=\n-----END CERTIFICATE REQUEST-----\n","profile":"","crl_override":"","label":"","NotBefore":"0001-01-01T00:00:00Z","NotAfter":"0001-01-01T00:00:00Z","ReturnPrecert":false,"CAName":"ca-pensionboard"}: Post "https://localhost:7054/enroll": tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "x509: ECDSA verification failure" while trying to verify candidate authority certificate "fabric-ca-server")
+2025/08/27 17:31:40 [INFO] TLS Enabled
+Error: Failed to get client TLS config: Failed to read '/home/ab_siddik/Desktop/pension-fabric/ca/orgs/mof/ca-cert.pem': open /home/ab_siddik/Desktop/pension-fabric/ca/orgs/mof/ca-cert.pem: no such file or directory
+2025/08/27 17:31:40 [INFO] TLS Enabled
+Error: Failed to get client TLS config: Failed to read '/home/ab_siddik/Desktop/pension-fabric/ca/orgs/bangladeshbank/ca-cert.pem': open /home/ab_siddik/Desktop/pension-fabric/ca/orgs/bangladeshbank/ca-cert.pem: no such file or directory
+       
+
+
+       # Pension Board CA cert
+docker cp ca.pensionboard.gov.bd:/etc/hyperledger/fabric-ca-server/ca-cert.pem ./ca/orgs/pensionboard/ca-cert.pem
+
+# MoF CA cert
+docker cp ca.mof.gov.bd:/etc/hyperledger/fabric-ca-server/ca-cert.pem ./ca/orgs/mof/ca-cert.pem
+
+# Bangladesh Bank CA cert
+docker cp ca.bangladeshbank.gov.bd:/etc/hyperledger/fabric-ca-server/ca-cert.pem ./ca/orgs/bangladeshbank/ca-cert.pem
+
+
+
+fabric-ca-client enroll -u https://admin:adminpw@localhost:7054 \
+  --caname ca-pensionboard \
+  --tls.certfiles ${PWD}/ca/orgs/pensionboard/ca-cert.pem \
+  -M ${PWD}/crypto-config/pensionboard/msp
+
+
+
+fabric-ca-client enroll -u https://admin:adminpw@localhost:8054 \
+  --caname ca-mof \
+  --tls.certfiles ${PWD}/ca/orgs/mof/ca-cert.pem \
+  -M ${PWD}/crypto-config/mof/msp
+
+
+
+fabric-ca-client enroll -u https://admin:adminpw@localhost:9054 \
+  --caname ca-bangladeshbank \
+  --tls.certfiles ${PWD}/ca/orgs/bangladeshbank/ca-cert.pem \
+  -M ${PWD}/crypto-config/bangladeshbank/msp
+
+ls -R crypto-config/

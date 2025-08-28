@@ -1,0 +1,9 @@
+{
+  "index": {
+    "fields": ["docType", "nid", "month"]
+  },
+  "ddoc": "idxContribByNidMonth",
+  "name": "idxContribByNidMonth",
+  "type": "json",
+  "partitioned": false
+}

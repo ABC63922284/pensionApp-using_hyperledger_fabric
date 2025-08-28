@@ -1,0 +1,9 @@
+{
+  "index": {
+    "fields": ["docType", "status", "nid"]
+  },
+  "ddoc": "idxClaimsByStatus",
+  "name": "idxClaimsByStatus",
+  "type": "json",
+  "partitioned": false
+}

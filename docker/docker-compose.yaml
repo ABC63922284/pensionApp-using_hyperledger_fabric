@@ -1,0 +1,52 @@
+version: "3.7"
+networks: { fabric_net: {} }
+
+services:
+
+  orderer.pensionboard.gov.bd:
+    container_name: orderer.pensionboard.gov.bd
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=PensionBoardMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/genesis.block
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    volumes:
+      - ../channel-artifacts/genesis.block:/var/hyperledger/orderer/genesis.block
+      - ../crypto-config/pensionboard/orderers/orderer.pensionboard.gov.bd/msp:/var/hyperledger/orderer/msp
+      - ../crypto-config/pensionboard/orderers/orderer.pensionboard.gov.bd/tls:/var/hyperledger/orderer/tls
+    ports:
+      - "7050:7050"
+    networks: [ fabric_net ]
+
+  peer0.pensionboard.gov.bd:
+    container_name: peer0.pensionboard.gov.bd
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=pension-fabric_fabric_net
+      - CORE_PEER_ID=peer0.pensionboard.gov.bd
+      - CORE_PEER_ADDRESS=peer0.pensionboard.gov.bd:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.pensionboard.gov.bd:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_LOCALMSPID=PensionBoardMSP
+      - CORE_PEER_MSPCONFIGPATH=/var/hyperledger/peer/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/peer/tls/ca.crt
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../crypto-config/pensionboard/peers/peer0.pensionboard/msp:/var/hyperledger/peer/msp
+      - ../crypto-config/pensionboard/peers/peer0.pensionboard/tls:/var/hyperledger/peer/tls
+    ports:
+      - "7051:7051"
+    depends_on: [ orderer.pensionboard.gov.bd ]
+    networks: [ fabric_net ]

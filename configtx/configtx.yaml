@@ -1,0 +1,74 @@
+Organizations:
+
+  - &PensionBoardOrg
+    Name: PensionBoardMSP
+    ID: PensionBoardMSP
+    MSPDir: ../crypto-config/pensionboard/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('PensionBoardMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('PensionBoardMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('PensionBoardMSP.admin')"
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  EtcdRaft:
+    Consenters:
+      - Host: orderer.pensionboard.gov.bd
+        Port: 7050
+        ClientTLSCert: ../crypto-config/pensionboard/orderers/orderer.pensionboard.gov.bd/tls/server.crt
+        ServerTLSCert: ../crypto-config/pensionboard/orderers/orderer.pensionboard.gov.bd/tls/server.crt
+  Addresses:
+    - orderer.pensionboard.gov.bd:7050
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+
+Profiles:
+
+  PensionGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *PensionBoardOrg
+    Consortiums:
+      PensionConsortium:
+        Organizations:
+          - *PensionBoardOrg
+
+  PensionChannel:
+    Consortium: PensionConsortium
+    Application:
+      <<: *ChannelDefaults
+      Organizations:
+        - *PensionBoardOrg

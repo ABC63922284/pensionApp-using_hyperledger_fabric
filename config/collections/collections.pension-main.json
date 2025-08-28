@@ -1,0 +1,16 @@
+[
+  {
+    "name": "pdc.kyc",
+    "policy": "OR('PensionBoardMSP.member','MoFMSP.member')",
+    "requiredPeerCount": 1,
+    "maxPeerCount": 2,
+    "blockToLive": 0
+  },
+  {
+    "name": "pdc.bankDetails",
+    "policy": "OR('PensionBoardMSP.member','BankAMSP.member')",
+    "requiredPeerCount": 1,
+    "maxPeerCount": 2,
+    "blockToLive": 0
+  }
+]
